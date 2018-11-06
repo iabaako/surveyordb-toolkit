@@ -1,0 +1,20 @@
+v 0.0.0.180701
+d 'SURVEYORDB': IPA Ghana stata programs for managing field staff database
+d These commands perform manage IPA Ghana surveyordb and includes  
+d
+d KW: field staff
+d KW: recruitment
+d KW: database
+d
+d Requires: Stata version 13.0
+d
+d Distribution-Date: 20190716
+d
+d Authors: Ishmail Azindoo Baako, Innovations for Poverty Action
+d Support: researchsupport@poverty-action.org; iabaako@poverty-action.org
+f surveyordb.ado
+f surveyordb_ImpConReq.ado
+f surveyordb_ImpFMOutput.ado
+f surveyordb_convert.ado
+f surveyordb_update.dlg
+f surveyordb_append.dlg

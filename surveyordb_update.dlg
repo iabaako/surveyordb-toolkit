@@ -1,0 +1,55 @@
+/* Title	: surveyordb_update.dlg
+   Purpose	: Create Dialog Box for using surveyordb_update.ado
+   Date		: jul2018
+*/
+
+*! version 0.0.0.180702 Ishmail Azindoo Baako (IPA)
+* Written in stata version 15.1; requires stata version 13.0
+VERSION 13.0
+SYNCHRONOUS_ONLY          
+POSITION . . 550 370
+
+DIALOG main, label("Surveyor Database Tool Kit - update") tabtitle("Main")
+BEGIN
+ GROUPBOX descbox			10	10	520	60	,	label("description")
+	TEXT desc1				20  35  500 .	,	///
+		label("update availabilty of field staff using the contract request form")
+	
+ GROUPBOX update			10  90  520 190	,	label("Options for updating availability")
+	TEXT lab1	 			20	+20	120	.	,	label("Load current surveyor database")
+	FILE dbfile				20	+20	500	.	,	label("Browse ..") error("Select Database File") filter("Stata Datasets (*.dta)")
+	TEXT lab2	 			20	+20	120	.	,	label("Load Contract Request Form")
+	FILE conreqfile			20	+20	500	.	,	label("Browse ..") error("Select Contract Request File") filter("Excel Files (*.xlsx, *.xls)")
+	TEXT sheetlab			20	+30	220	10	,	label("Specify Contract Request Sheet")
+	EDIT sheet				230	@	180	20	,	label(sheename) default(Request)
+	TEXT lab3	 			20	+20	120	.	,	label("Save new surveyor database as")
+	FILE savefile			20	+20	500	.	,	label("Browse ..") error("Select filename for saving new dataset") filter("Stata Datasets (*.dta)") save
+
+ GROUPBOX options			10  300 520 50	,	label("Other Options")
+	CHECKBOX optrep			20	+20 .	.	, 	label("Replace if new dataset exist") option(replace) 
+END
+
+OK      ok1,    label("OK")
+CANCEL  can1,   label("Cancel")
+SUBMIT  sub1
+COPY    copy1
+HELP    hlp1,   view("help surveyordb_update")
+RESET   res1,   label("Reset")
+
+PROGRAM command
+BEGIN
+    put "surveyordb update using "
+    require main.dbfile 
+    put `"""' main.dbfile `"""' 
+	put ", request("
+    require main.conreqfile
+    put main.conreqfile
+	put ") sheet("
+	require main.sheet
+	put main.sheet
+	put ") save("
+	require main.savefile
+	put main.savefile
+	put ")"
+		option main.optrep
+END
