@@ -1,0 +1,3 @@
+v 0.0.0.180701
+d IPA Ghana Surveyor Database Programs
+p IPA Ghana stata programs for managing surveyor database
