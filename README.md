@@ -1,2 +1,3 @@
-# surveyordb-toolkit
-Tool-Kit for working with IPA-GH Surveyor Database
+# Surveyor Database Toolkit
+
+Stata Programmes for manaaging the IPA Ghana Surveyor Database
