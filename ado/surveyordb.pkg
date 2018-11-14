@@ -1,4 +1,4 @@
-v 0.0.0.180701
+v 0.0.0.181113
 d 'SURVEYORDB': IPA Ghana stata programs for managing field staff database
 d These commands perform manage IPA Ghana surveyordb and includes  
 d
@@ -16,5 +16,5 @@ f surveyordb.ado
 f surveyordb_ImpConReq.ado
 f surveyordb_ImpFMOutput.ado
 f surveyordb_convert.ado
-f surveyordb_update.dlg
-f surveyordb_append.dlg
+f ../dlg/surveyordb_update.dlg
+f ../dlg/surveyordb_append.dlg
