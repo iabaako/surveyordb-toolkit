@@ -51,14 +51,14 @@ program define surveyordb_convert
 		 "FEMALE""
 		;
 	loc education 
-		""DOCTORATE" 
-		 "MASTERS" 
-		 "BACHELORS" 
-		 "HND" 
-		 "DIPLOMA" 
-		 "CERTIFICATE" 
-		 "SSCE" 
-		 "BECE""
+		""BECE"
+		"SSCE"
+		"CERTIFICATE"
+		"DIPLOMA"
+		"HND"
+		"BACHELORS"
+		"MASTERS" 
+		"DOCTORATE""
 		;
 	loc proficiency 
 		""None" 

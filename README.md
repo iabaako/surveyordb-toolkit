@@ -8,10 +8,10 @@ Stata Module for managing the IPA Ghana Surveyor Database
 IPA Ghana Database is a collection of information and evaluation scores of field staff. Which is mainly used
 for the purpose of recruitment at IPA. This toolkit is intended for internal use only at IPA-Ghana. The Module
 contains the following subcmds: 
-	 * update    : Updates availability status of field staff using the CRF form
-	 * append    : Appends new performance data to surveyor database using CRF and FMO 
-	 * summarize : Summarize database and output useful statistics
-	 * select    : Selects internal candidates using RRF
+* update    : Updates availability status of field staff using the CRF form
+* append    : Appends new performance data to surveyor database using CRF and FMO 
+* summarize : Summarize database and output useful statistics
+* select    : Selects internal candidates using RRF
 
 ## Installation (Beta)
 

@@ -237,7 +237,92 @@ end
 * program to select field staff from surveyordb using recruitment request form
 program define surveyordb_select
 	syntax using/, REQuest(string) outfile(string) [replace]
-	noi di 	"`using'"
-	noi di	"`request'" 
-	noi di  "`fmoutput'"
+	
+	qui {
+		* tempfiles
+		tempfile _database _request
+
+		noi disp
+
+		* import project details sheet and import values as locals
+		import excel using "`request'", sheet("Project Details") allstr clear
+			* define locals
+			loc acronym 	= C[5]
+			loc code 		= C[6]
+			loc grant 		= C[7]
+			loc office  	= C[8]
+			loc phase   	= C[9]
+			loc add_info	= C[10]
+			loc fm 			= C[13]
+			loc head        = C[14]
+			loc manager 	= C[15]
+			loc sc    		= C[16]
+			loc submission 	= C[19]
+			loc training 	= C[20]
+			loc field       = C[21]
+			loc duration 	= C[22]
+
+
+		* import sheets
+		import excel using "`request'", describe 
+		forval i = 1/`r(N_worksheet)' {
+			if !inlist("`r(worksheet_`i')'", "Template", "choices", "Project Details", "") {
+				noi disp "Creating List from sheet " as res "`r(worksheet_`i')'"
+
+
+				* import each sheet, run request agains surveyor db and export results to outfile
+				import excel using "`request'", sheet("`r(worksheet_`i')'") allstr clear
+				* define locals
+				loc position  	= D[3]
+				* check that language requirement has been specified
+				if B[9] ~= "" {
+					loc f_lang_cond ""
+					forval j = 9(4)25 {
+						if B[`j'] ~= "" {
+							* change text 
+							loc lang_cond = subinstr(upper(B[`j']), " ", "_", .) + " >= " + "`=C[`j'+1]'"
+							if E[`j'] ~= "" loc lang_cond = `"`lang_cond'"' + " & " + subinstr(upper(E[`j'+1]), " ", "_", .) + " == " + "`=F[`j'+1]'"
+							if H[`j'] ~= "" loc lang_cond = `"`lang_cond'"' + " & " + subinstr(upper(H[`j'+1]), " ", "_", .) + " == " + "`=I[`j'+1]'"
+
+							if `j' > 9 loc f_lang_cond = `"`f_lang_cond'"' + " | (" + `"`lang_cond'"' + ")"
+							else loc f_lang_cond `"`lang_cond'"'
+						}
+					}
+				}
+
+				* location requirement: Check that location was specified
+				if C[30] ~= "" {
+					loc f_loc_cond = "region == " + `"""' + upper(C[30]) + `"""'
+					forval j = 32(2)46 {
+						if C[`j'] ~= "" loc f_loc_cond = `"`f_loc_cond'"' + " | (region == " + `"""' + upper(C[`j']) + `"""' + ")"
+					}
+				}
+				
+				* Previous experience on specific ipa position
+				if E[51] ~= "" {
+					* generate string version of role
+					decode role, gen (role_str)
+
+					loc position = E[51]
+					token "`position'", parse(,)
+					loc f_pos_cond = "role == " +  `"""' + upper(trim("`1'")) + `"""'
+					forval j = 2/30 {
+						if "``j''" ~= "," & "``j''" ~= "" ///
+							loc f_pos_cond = `"`f_pos_cond'"' + " | role == " + `"""' + upper(trim("``j''")) + `"""'
+					}
+				}
+
+				* minimum database score: Check that minimum database score is specified
+				if E[55] ~= "" loc f_dscore_cond 	= "database_score == " + "`=subinstr(E[55], "%", "/100", 1)'"
+
+				* APPLY REQUIRED CRITERIA
+				use "`using'", clear
+				* For each condition, check that it was specified and 
+
+				foreach cond in f_lang_cond f_pos_cond f_pos_cond f_dscore_cond {
+					if "``cond''" ~= "" keep if ``cond''
+				} 
+			}
+		}
+	}
 end

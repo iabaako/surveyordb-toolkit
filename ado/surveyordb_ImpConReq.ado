@@ -94,7 +94,9 @@ program define surveyordb_ImpConReq, rclass
 	* gender
 	surveyordb_convert gender, default(gender) values(1) upper trim encode
 	* Education
+
 	surveyordb_convert education, default(education) values(1) upper trim
+	
 	* convert roles to numeric
 	surveyordb_convert role, default(role) values(1) upper trim
 	
