@@ -240,7 +240,7 @@ program define surveyordb_select
 	
 	qui {
 		* tempfiles
-		tempfile _database _request
+		tempfile _database _request _evals _request_clean
 
 		noi disp
 
@@ -252,19 +252,20 @@ program define surveyordb_select
 			loc grant 		= C[7]
 			loc office  	= C[8]
 			loc phase   	= C[9]
-			loc add_info	= C[10]
-			loc fm 			= C[13]
-			loc head        = C[14]
-			loc manager 	= C[15]
-			loc sc    		= C[16]
-			loc submission 	= C[19]
-			loc training 	= C[20]
-			loc field       = C[21]
-			loc duration 	= C[22]
+			loc sub_phase	= C[10]
+			loc fm 			= C[14]
+			loc head        = C[15]
+			loc manager 	= C[16]
+			loc sc    		= C[17]
+			loc submission 	= C[21]
+			loc training 	= C[22]
+			loc field       = C[23]
+			loc duration 	= C[24]
 
 
 		* import sheets
 		import excel using "`request'", describe 
+		loc sheetcount = `r(N_worksheet)'
 		forval i = 1/`r(N_worksheet)' {
 			if !inlist("`r(worksheet_`i')'", "Template", "choices", "Project Details", "") {
 				noi disp "Creating List from sheet " as res "`r(worksheet_`i')'"
@@ -273,56 +274,341 @@ program define surveyordb_select
 				* import each sheet, run request agains surveyor db and export results to outfile
 				import excel using "`request'", sheet("`r(worksheet_`i')'") allstr clear
 				* define locals
-				loc position  	= D[3]
-				* check that language requirement has been specified
-				if B[9] ~= "" {
-					loc f_lang_cond ""
-					forval j = 9(4)25 {
-						if B[`j'] ~= "" {
-							* change text 
-							loc lang_cond = subinstr(upper(B[`j']), " ", "_", .) + " >= " + "`=C[`j'+1]'"
-							if E[`j'] ~= "" loc lang_cond = `"`lang_cond'"' + " & " + subinstr(upper(E[`j'+1]), " ", "_", .) + " == " + "`=F[`j'+1]'"
-							if H[`j'] ~= "" loc lang_cond = `"`lang_cond'"' + " & " + subinstr(upper(H[`j'+1]), " ", "_", .) + " == " + "`=I[`j'+1]'"
+				loc position  	= D[4]
 
-							if `j' > 9 loc f_lang_cond = `"`f_lang_cond'"' + " | (" + `"`lang_cond'"' + ")"
+				* check that language requirement has been specified
+			
+				if B[10] ~= "" {
+					loc f_lang_cond ""
+					loc f_lang_spec ""
+					forval j = 16(4)32 {
+						if B[`j'] ~= "" {
+							* create a list of languages specified
+							loc f_lang_spec = "`f_lang_spec'" + " " + ///
+								itrim(trim(subinstr(upper(B[`j']), " ", "_", .) + " " + ///
+								subinstr(upper(E[`j']), " ", "_", .) + " " + ///
+								subinstr(upper(H[`j']), " ", "_", .)))
+							
+							loc f_lang_spec: list uniq f_lang_spec
+
+							* create condition for language filter 
+							loc lang_cond = "(" + subinstr(upper(B[`j']), " ", "_", .) + " >= " + "`=C[`j'+1]'"
+							if E[`j'] ~= "" loc lang_cond = `"`lang_cond'"' + " & " + subinstr(upper(E[`j']), " ", "_", .) + " >= " + "`=F[`j'+1]'"
+							if H[`j'] ~= "" loc lang_cond = `"`lang_cond'"' + " & " + subinstr(upper(H[`j']), " ", "_", .) + " >= " + "`=I[`j'+1]'"
+							loc lang_cond = `"`lang_cond'"' + ")"
+
+							if `"`f_lang_cond'"' ~= "" loc f_lang_cond = `"`f_lang_cond'"' + " | (" + `"`lang_cond'"' + ")"
 							else loc f_lang_cond `"`lang_cond'"'
 						}
 					}
 				}
 
 				* location requirement: Check that location was specified
-				if C[30] ~= "" {
-					loc f_loc_cond = "region == " + `"""' + upper(C[30]) + `"""'
-					forval j = 32(2)46 {
-						if C[`j'] ~= "" loc f_loc_cond = `"`f_loc_cond'"' + " | (region == " + `"""' + upper(C[`j']) + `"""' + ")"
-					}
-				}
+				#d;
+				loc regions
+					"ASHANTI
+			        BRONG_AHAFO
+			        CENTRAL
+			        EASTERN
+			        GREATER_ACCRA
+			        NORTHERN
+			        UPPER_EAST
+			        UPPER_WEST
+			        VOLTA
+			        WESTERN"
+			        ;
+			     #d cr
+			     
+			     * loop through and check if the box is checked. If yes include in regexm expression
+			     * I NB: If more regions are added after referendum, change forval range
+			     loc regexm_cond ""
+			     forval r = 1/10 {
+			     	* determine which col to pull from
+			     	if `r' <= 8 loc col "K"
+			     	else loc col "L"
+
+			     	* determine row
+			     	if `r' <= 8 loc row = 35 + `r'
+			     	else loc row = 35 + `r' - 8  
+
+			     	if `col'[`row'] == "1" {
+			     		* get value if region is checked
+			     		loc reg_checked: word `r' of `regions'
+
+			     		if "`regexm_cond'" == "" loc regexm_cond = "`reg_checked'"
+			     		else loc regexm_cond = "`regexm_cond'" + "|" + "`reg_checked'"
+			     	}
+			     }
+			
+			    if "`regexm_cond'" ~= "" loc f_loc_cond "regexm(region, "`regexm_cond'")"
 				
 				* Previous experience on specific ipa position
-				if E[51] ~= "" {
-					* generate string version of role
-					decode role, gen (role_str)
+				* define field staff position values by order in excel form
+				loc pos_vals "2 3 12 4 6 14 7 5 8 1 13 10 11 9"
+				loc inlist_cond = ""
+				forval p = 1/`=wordcount("`pos_vals'")' {
+					* determine which col to pull from
+			     	if `p' <= 8 loc col "K"
+			     	else loc col "L"
 
-					loc position = E[51]
-					token "`position'", parse(,)
-					loc f_pos_cond = "role == " +  `"""' + upper(trim("`1'")) + `"""'
-					forval j = 2/30 {
-						if "``j''" ~= "," & "``j''" ~= "" ///
-							loc f_pos_cond = `"`f_pos_cond'"' + " | role == " + `"""' + upper(trim("``j''")) + `"""'
-					}
+			     	* determine row
+			     	if `p' <= 8 loc row = 46 + `p'
+			     	else loc row = 46 + `p' - 8 
+
+			     	if `col'[`row'] == "1" {
+			     		* get value if position is checked
+			     		loc pos_checked: word `p' of `pos_vals'
+
+			     		if "`inlist_cond'" == "" loc inlist_cond = "`pos_checked'"
+			     		else loc inlist_cond = "`inlist_cond'" + "," + "`pos_checked'"
+			     	}
 				}
 
-				* minimum database score: Check that minimum database score is specified
-				if E[55] ~= "" loc f_dscore_cond 	= "database_score == " + "`=subinstr(E[55], "%", "/100", 1)'"
+				if "`inlist_cond'" ~= "" loc f_pos_cond "inlist(role, `inlist_cond')"
+				
+				* check for project specific criteria
+				if E[53] ~= "" {
+					forval s = 1/10 {
+						* determine which col to pull from
+				     	if `s' <= 5 {
+				     		loc col_project "E"
+				     		loc col_phase	"F"
+				     	}
+				     	else {
+				     		loc col_project "H"
+				     		loc col_phase	"I"
+				     	}
+
+				     	* determine row
+				     	if `s' <= 5 loc row = 58 + `s'
+				     	else loc row = 58 + `s' - 5 
+	     	
+				     	if `col_project'[`row'] ~= "" {
+				     		if "`f_proj_cond'" == "" loc f_proj_cond = "(project_acronym == " + `"""' + upper("`=`col_project'[`row']'") + `"""'
+				     		else loc f_proj_cond = `"`f_proj_cond'"' + " | " + "(project_acronym == " + `"""' + upper("`=`col_project'[`row']'") + `"""'
+				     		if `col_phase'[`row'] ~= "" loc f_proj_cond = `"`f_proj_cond'"' + " & " + "project_phase == " + `"""' + upper("`=`col_phase'[`row']'") + `"""' + ")"
+				     		else loc f_proj_cond = `"`f_proj_cond'"' + ")"
+				     	}
+					} 
+				}
+
+				* check for project to exclude
+				if E[53] ~= "" {
+					forval s = 1/10 {
+						* determine which col to pull from
+				     	if `s' <= 5 {
+				     		loc col_project "E"
+				     		loc col_phase	"F"
+				     	}
+				     	else {
+				     		loc col_project "H"
+				     		loc col_phase	"I"
+				     	}
+
+				     	* determine row
+				     	if `s' <= 5 loc row = 67 + `s'
+				     	else loc row = 67 + `s' - 5 
+	     	
+				     	if `col_project'[`row'] ~= "" {
+				     		if "`f_proj_drop_cond'" == "" loc f_proj_drop_cond = "(project_acronym == " + `"""' + upper("`=`col_project'[`row']'") + `"""'
+				     		else loc f_proj_drop_cond = `"`f_proj_drop_cond'"' + " | " + "(project_acronym == " + `"""' + upper("`=`col_project'[`row']'") + `"""'
+				     		if `col_phase'[`row'] ~= "" loc f_proj_drop_cond = `"`f_proj_drop_cond'"' + " & " + "project_phase == " + `"""' + upper("`=`col_phase'[`row']'") + `"""' + ")"
+				     		else loc f_proj_drop_cond = `"`f_proj_drop_cond'"' + ")"
+				     	}
+
+					} 
+				}
+
+				* condition for research_area
+				#d;
+				loc research_areas
+					"
+					"Agriculture"
+			       	"Education"
+			       	"Financial Inclusion"
+			       	"Governance"
+			       	"Health"
+			       	"Peace and Recovery"
+			       	"Small and Medium Enterprises"
+			       	"Social Protection"
+			       	"
+			       	;
+			    #d cr
+
+			    loc regexm_cond ""
+			    forval a = 1/8 {
+			    	if D[`=75+`a''] == "1" {
+			    		loc area: word `a' of `research_areas'
+			    		if "`regexm_cond'" == "" loc regexm_cond = upper("`area'")
+			    		else loc regexm_cond = "`regexm_cond'" + "|" + upper("`area'")
+			    	}
+			    }
+
+			    if "`regexm_cond'" ~= "" loc f_area_cond = `"regexm(researcharea, "`regexm_cond'")"'
+	
+			    * condition for PAPER or CAPI
+			    if inlist(E[88], "Paper", "CAPI") loc f_paper_capi_cond = "inlist(paper_or_capi, 3, " + D[88] + ")"
+				
+				* condition for CAPI Software
+				* first check that capi was selected
+				loc regexm_cond ""
+				if E[88] == "CAPI" {
+					#d;
+					loc capi_softwares
+						""Blaise C.B.S"
+       					 ODK
+       					 SurveyCTO
+       					 Tangerine
+						"
+						;
+					#d cr
+					
+					forval c = 1/4 {
+						if K[`=92+`c''] == "1" {
+							if `"`regexm_cond'"' == "" loc regexm_cond = upper(subinstr("`:word `c' of `capi_softwares''", ".", "\.", .))
+							else loc regexm_cond = `"`regexm_cond'"' + "|" + upper(subinstr("`:word `c' of `capi_softwares''", ".", "\.", .))
+						} 
+					}
+				}	
+
+				if `"`regexm_cond'"' ~= "" loc f_capi_soft_cond = `"regexm(capi_software, "`regexm_cond'")"'
+
+				* check for phone or in-person interviewing
+				if inlist(E[101], "Phone", "Field") loc f_phone_field_cond = "inlist(interview_mode, 3, " + D[101] + ")"
+				noi disp "`f_phone_field_cond'"
+
+				* check for quantitative or qualitative 
+				if inlist(E[107], "Quantitative", "Qualitative") loc f_quant_qual_cond = "inlist(quantitative_or_qualitative, 3, " + D[107] + ")"
+
+				* check for minimal educational qualification
+				if E[113] ~= "" loc f_educ_cond = "education >= " + D[113]
+
+				* check if user specified to ignore cut off
+				if E[114] == "1" loc f_dscore_cond 0
+				else loc f_dscore_cond 40 
+
+				* check if user specified gender
+				if inlist(E[129], "Female", "Male") loc f_gender_cond = "gender == " + D[129]
+				
+				save `_request'
 
 				* APPLY REQUIRED CRITERIA
 				use "`using'", clear
-				* For each condition, check that it was specified and 
+				* For each condition, check that it was specified and apply requirement
+				
+				if `"`f_pos_cond'"' ~= "" decode role, gen (role_str)
+				foreach cond in lang loc pos proj proj_drop area paper_capi capi_soft phone_field quant_qual educ gender {
+					if `=_N' > 0 {
+						if `"`f_`cond'_cond'"' ~= "" {
+							gen `cond'_qualified = `f_`cond'_cond'
+							bys uniqueid: egen `cond'_keep = sum(`cond'_qualified)
 
-				foreach cond in f_lang_cond f_pos_cond f_pos_cond f_dscore_cond {
-					if "``cond''" ~= "" keep if ``cond''
-				} 
+							* drop if surveyors who do not meet specified conditions
+							if "`cond'" == "proj_drop" keep if !`cond'_keep
+							else drop if !`cond'_keep
+							loc `cond'_dropped  = `r(N_drop)'
+							drop `cond'_*
+							noi di "`cond': ``cond'_dropped'"
+						}
+					}
+				}
+				
+				save `_database'
+				
+				if `=_N' > 0 {
+					* Generate weighted average scores
+					gsort uniqueid -enddate
+					by uniqueid: gen eval_order = _n
+					drop if eval_order > 3
+					by uniqueid: gen eval_count = _N
+
+					* generate variable to hold weights
+					* The ideal scenario is that everyone has at least 3 evals and then the scores are weighted by 50, 30, 20 rule
+						* however if someone has 2 evaluations is weighted with the 60, 40 and single evals are weigted 100%
+					gen eval_weights = 	cond(eval_order == 1 & eval_count == 3, 0.5, ///
+										cond(eval_order == 2 & eval_count == 3, 0.3, ///
+										cond(eval_order == 3 & eval_count == 3, 0.2, ///	
+										cond(eval_order == 1 & eval_count == 2, 0.6, ///
+										cond(eval_order == 2 & eval_count == 2, 0.4, 1)))))
+
+					* generate db_score_weigted
+					egen db_score = rowmean(professionalism communication independence teamwork compliance writing)
+					replace db_score = float((db_score/5)) * 100 
+					replace db_score = float(db_score) * float(eval_weights)
+					bys uniqueid: egen db_score_weighted = sum(db_score)
+					keep if eval_order == 1
+
+					* apply database cut off
+					drop if db_score_weighted <= float(`f_dscore_cond')
+					
+					keep uniqueid db_score_weighted
+					
+					merge 1:m uniqueid using `_database', nogen keep(match)
+					order db_score_weighted, after(writing)
+
+					* save database
+					save `_database', replace
+				}
+
+				***
+				* APPLY PREFERRED CRITERIA
+				***
+
+				* check that preferred criteria has been specified. 
+									* apply additional required criteria
+				use `_request', clear
+				keep B G H
+				keep if inlist(_n, 137, 139, 141, 143, 145, 147) & !missing(B)
+
+				loc sort_count = `=_N'
+				forval k = 1/`sort_count' {
+					* save sorting criteria
+					loc B`k' = B[`k']
+					loc G`k' = G[`k']
+					loc H`k' = H[`k']
+				}
+
+				use `_database', clear
+				forval k = 1/`sort_count' {
+					* use sorting criteria
+					sortby `G`k'', value(`H`k'') id(uniqueid)
+				}
+
+				bysort uniqueid: keep if _n == _N
+
+				* apply sorting criteria and export
+				forval k = 1/`sort_count' {
+					gsort -`G`k''
+				}
+
+				* generate rank
+				gen rank = _n
+
+				export excel uniqueid - education `f_lang_spec' rank ///
+					using "`outfile'.xlsx", sheet("`position'") sheetreplace first(var)
+
 			}
 		}
 	}
+end
+
+* program to apply individual required criteria
+program define sortby
+	syntax varname[, value(string)] id(varname)
+	
+	* define sorting criteria for strings
+	if inlist("`varlist'", "project", "researcharea", "capi_software") {
+		bys uniqueid: gen `varlist'_qualified = `varlist' == upper("`value'")
+		bys uniqueid: egen `varlist'_sortby = max(`varlist'_qualified)
+	}
+	else if "`varlist'" == "db_score_weighted" gen `varlist'_sortby = `varlist'
+	else {
+		if inlist("`value'", "Paper", "Phone", "Quantitative", "Male") loc value 1
+		else loc value 2
+
+		bys uniqueid: gen `varlist'_qualified = inlist(`varlist',3, `value')
+		bys uniqueid: egen `varlist'_sortby = max(`varlist'_qualified)
+	}
+
+	cap drop `varlist'_qualified
 end
