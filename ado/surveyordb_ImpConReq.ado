@@ -30,7 +30,7 @@ program define surveyordb_ImpConReq, rclass
 	drop if nonmiss <= 3 | type == "."
 	
 	* generate row number to mark observations
-	gen row = _n + 13
+	gen row = _n + 14
 	
 	destring uniqueid, replace
 	* check that ID var is numeric and is nonmissing
