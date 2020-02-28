@@ -247,7 +247,7 @@ program define surveyordb_select
 		noi disp
 
 		* import unavailable list and keep list of current trainees, temp and permanently unavailable
-		import excel using "`exclude'", sheet(trainee) cellrange(B2:O10001) firstrow clear
+		import excel using "`exclude'", sheet(trainee) cellrange(B2) firstrow clear
 		keep if inlist(currentstatus, "in progress", "scheduled")
 		gen reason = "trainee on " + project
 		keep uniqueid trainingends
@@ -258,14 +258,14 @@ program define surveyordb_select
 		
 		save `_exclude', emptyok
 
-		import excel using "`exclude'", sheet(temporarily unavailable) cellrange(B2:M10001) firstrow clear
+		import excel using "`exclude'", sheet(temporarily unavailable) cellrange(B2) firstrow clear
 		keep if !missing(uniqueid)
 		keep uniqueid to reason
 		ren to available_after
 		append using `_exclude'
 		save `_exclude', emptyok replace
 
-		import excel using "`exclude'", sheet(permanently unavailable) cellrange(B2:M10001) firstrow clear
+		import excel using "`exclude'", sheet(permanently unavailable) cellrange(B2) firstrow clear
 		keep if !missing(uniqueid)
 		keep uniqueid
 		gen available_after = date("31dec2030", "DMY")
@@ -616,7 +616,7 @@ program define surveyordb_select
 
 		    		gen interview_mode = 3 if phone_exp == 1 & field_exp == 1
 
-		    		loc f_paper_capi_cond = "inlist(interview_mode, 3)"
+		    		loc f_phone_field_cond = "inlist(interview_mode, 3)"
 		    		save `_transit', replace
 
 		    		use `_shortlist', clear
