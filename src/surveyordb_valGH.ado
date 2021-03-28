@@ -32,7 +32,7 @@
 	
 	gl 	crf_startcell "A14"
 
-* rows for project details 
+* cellrange for project details 
 	
 	gl 	crf_projcellrange "A1:B11"
 
@@ -53,7 +53,32 @@
 	#d cr
 
 
-* define values for database variables
+* FIELD MONITORING OUTPUT
+
+* cellrange for project details
+
+	gl 	fmo_projcellrange "A2:B10"
+
+* varnames of rows in project details
+
+	#d;
+	gl 	fmo_projvars
+		"
+		project		  
+		project_acronym
+		project_phase 
+		paper_or_capi 
+		capi_software 
+		researcharea 
+		field_manager 
+		project_head 
+		project_manager
+		"
+		;
+	#d cr
+
+
+* DATABASE
 
 	#d;
 	gl  sdb_role 
